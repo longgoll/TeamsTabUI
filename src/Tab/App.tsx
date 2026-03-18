@@ -64,6 +64,8 @@ const createIdFromName = (name: string) =>
 export default function App() {
   // const [content, setContent] = React.useState("");
   const [theme, setTheme] = React.useState("default");
+  const [isTeamsInitialized, setIsTeamsInitialized] = React.useState(false);
+  const [teamsInitError, setTeamsInitError] = React.useState<string | null>(null);
   const [profiles, setProfiles] = React.useState<EmployeeProfile[]>(EMPLOYEE_PROFILES);
   const [keyword, setKeyword] = React.useState("");
   const [departmentFilter, setDepartmentFilter] = React.useState("all");
@@ -90,6 +92,7 @@ export default function App() {
 
     const initialize = async () => {
       try {
+        setTeamsInitError(null);
         await teamsJs.app.initialize();
         const context = await teamsJs.app.getContext();
 
@@ -108,8 +111,13 @@ export default function App() {
         if (typeof teamsJs.app.registerOnThemeChangeHandler === "function") {
           teamsJs.app.registerOnThemeChangeHandler(themeHandler);
         }
+
+        setIsTeamsInitialized(true);
       } catch (error) {
         console.error("Teams initialization failed", error);
+        if (isMounted) {
+          setTeamsInitError("Không thể khởi tạo Teams SDK. Hãy mở app trong Microsoft Teams và kiểm tra lại manifest/domain.");
+        }
       }
     };
 
@@ -248,6 +256,27 @@ export default function App() {
       window.open(chatDeepLink, "_blank", "noopener,noreferrer");
     }
   };
+
+  if (teamsInitError) {
+    return (
+      <div className="min-h-screen bg-(--color-page) px-4 py-8 text-(--color-text-primary)">
+        <div className="mx-auto w-full max-w-3xl rounded-xl border border-(--color-border-strong) bg-(--color-surface) p-5">
+          <h2 className="text-lg font-semibold">Teams SDK initialization failed</h2>
+          <p className="mt-2 text-sm text-(--color-text-secondary)">{teamsInitError}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isTeamsInitialized) {
+    return (
+      <div className="min-h-screen bg-(--color-page) px-4 py-8 text-(--color-text-primary)">
+        <div className="mx-auto w-full max-w-3xl rounded-xl border border-(--color-border) bg-(--color-surface) p-5 text-sm text-(--color-text-secondary)">
+          Đang khởi tạo ứng dụng Teams...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-(--color-page) px-4 py-8 text-(--color-text-primary) transition-colors duration-200">

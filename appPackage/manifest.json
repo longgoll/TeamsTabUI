@@ -29,8 +29,8 @@
         {
             "entityId": "index0",
             "name": "Home",
-            "contentUrl": "https://teams-tab-ui.vercel.app/tabs/home",
-            "websiteUrl": "https://teams-tab-ui.vercel.app/tabs/home",
+            "contentUrl": "https://teams-tab-ui.vercel.app/",
+            "websiteUrl": "https://teams-tab-ui.vercel.app/",
             "scopes": [
                 "personal",
                 "groupChat",

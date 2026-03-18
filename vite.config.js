@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
-  base: "/tabs/home",
+  base: "/",
   esbuild: {
     tsconfigRaw: fs.readFileSync("./tsconfig.app.json"),
   },
