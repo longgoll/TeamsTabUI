@@ -2,7 +2,7 @@
     "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.25/MicrosoftTeams.schema.json",
     "manifestVersion": "1.25",
     "version": "1.0.0",
-    "id": "${{TEAMS_APP_ID}}",
+    "id": "e4b3c9a1-5d6e-4f8a-9b2c-1d3e5f7a9b0c",
     "developer": {
         "name": "My App, Inc.",
         "websiteUrl": "https://www.example.com",
@@ -14,7 +14,7 @@
         "outline": "outline.png"
     },
     "name": {
-        "short": "tab-app-test${{APP_NAME_SUFFIX}}",
+        "short": "tab-app-test",
         "full": "Full name for tab-app-test"
     },
     "description": {
@@ -29,8 +29,8 @@
         {
             "entityId": "index0",
             "name": "Home",
-            "contentUrl": "${{TAB_ENDPOINT}}/tabs/home",
-            "websiteUrl": "${{TAB_ENDPOINT}}/tabs/home",
+            "contentUrl": "https://teams-tab-ui.vercel.app/tabs/home",
+            "websiteUrl": "https://teams-tab-ui.vercel.app/tabs/home",
             "scopes": [
                 "personal",
                 "groupChat",
@@ -43,6 +43,6 @@
         "messageTeamMembers"
     ],
     "validDomains": [
-        "${{TAB_DOMAIN}}"
+        "teams-tab-ui.vercel.app"
     ]
 }
