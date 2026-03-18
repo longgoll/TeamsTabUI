@@ -1,0 +1,82 @@
+﻿@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --color-page: #f3f2f1;
+  --color-surface: #ffffff;
+  --color-surface-alt: #faf9f8;
+  --color-surface-card: #ffffff;
+  --color-surface-card-hover: #f4f4f4;
+  --color-border: #e1dfdd;
+  --color-border-strong: #c8c6c4;
+  --color-divider: #edebe9;
+  --color-text-primary: #201f1f;
+  --color-text-secondary: #484644;
+  --color-text-muted: #8a8886;
+  --color-accent: #6264a7;
+  --color-accent-strong: #464775;
+  --color-accent-contrast: #ffffff;
+  --color-pill: #edebe9;
+  --color-pill-text: #323130;
+  --color-overlay: rgba(32, 31, 31, 0.55);
+  --color-card-shadow: rgba(32, 31, 31, 0.18);
+  --color-input-focus-ring: rgba(98, 100, 167, 0.45);
+}
+
+[data-teams-theme="dark"] {
+  color-scheme: dark;
+  --color-page: #0f0f0f;
+  --color-surface: #1f1f1f;
+  --color-surface-alt: #252423;
+  --color-surface-card: #2b2a29;
+  --color-surface-card-hover: #323130;
+  --color-border: #3b3a39;
+  --color-border-strong: #484644;
+  --color-divider: #323130;
+  --color-text-primary: #f3f2f1;
+  --color-text-secondary: #c8c6c4;
+  --color-text-muted: #a19f9d;
+  --color-accent: #8b8cc7;
+  --color-accent-strong: #b3b4f8;
+  --color-accent-contrast: #201f1f;
+  --color-pill: rgba(255, 255, 255, 0.08);
+  --color-pill-text: #f3f2f1;
+  --color-overlay: rgba(0, 0, 0, 0.65);
+  --color-card-shadow: rgba(0, 0, 0, 0.55);
+  --color-input-focus-ring: rgba(138, 180, 248, 0.5);
+}
+
+[data-teams-theme="contrast"] {
+  color-scheme: dark;
+  --color-page: #000000;
+  --color-surface: #000000;
+  --color-surface-alt: #000000;
+  --color-surface-card: #000000;
+  --color-surface-card-hover: #1a1a1a;
+  --color-border: #ffffff;
+  --color-border-strong: #ffffff;
+  --color-divider: #ffffff;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-text-muted: #ffffff;
+  --color-accent: #ffb900;
+  --color-accent-strong: #fff100;
+  --color-accent-contrast: #000000;
+  --color-pill: transparent;
+  --color-pill-text: #ffffff;
+  --color-overlay: rgba(0, 0, 0, 0.85);
+  --color-card-shadow: rgba(255, 255, 255, 0.25);
+  --color-input-focus-ring: #fff100;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-page);
+  color: var(--color-text-primary);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+* {
+  border-color: var(--color-border);
+}
