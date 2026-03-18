@@ -4,7 +4,6 @@ import * as teamsJs from "@microsoft/teams-js";
 import "./App.css";
 import { DirectoryFilters } from "./components/DirectoryFilters";
 import { EmployeeDirectoryGrid } from "./components/EmployeeDirectoryGrid";
-import { HostBanner } from "./components/HostBanner";
 import { PageHeader } from "./components/PageHeader";
 import { ProfileFormModal } from "./components/ProfileFormModal";
 import { ProfileModal } from "./components/ProfileModal";
