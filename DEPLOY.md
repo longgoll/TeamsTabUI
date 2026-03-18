@@ -1,52 +1,84 @@
-# Guide to Deploy Teams UI App to Vercel/Netlify
+# Deploy Teams Tab App to Vercel (Production)
 
-## 1. Build the Frontend
+This guide is for deploying the React Teams Tab in this repo to Vercel and loading it in Microsoft Teams without blank-screen issues.
 
-- Open terminal in your project folder.
+## 1) Prepare project config
+
+- Ensure `vite.config.js` uses root base path:
+
+```js
+base: "/"
+```
+
+- Ensure `vercel.json` exists at project root:
+
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+This rewrite makes SPA routing stable when Teams opens the tab URL.
+
+## 2) Build and push
+
 - Run:
 
 ```
 npm install
-npm run build
+npm run build:frontend
 ```
-- After building, the `dist` folder will be created.
 
-## 2. Deploy to Vercel or Netlify
+- Push the latest code to your Git repository branch connected to Vercel.
 
-### Vercel
-- Sign up at https://vercel.com
-- Create a new project, select your repo or upload the `dist` folder.
-- After deployment, you will get a public link like: `https://your-app.vercel.app`
+## 3) Deploy on Vercel
 
-### Netlify
-- Sign up at https://netlify.com
-- Create a new site, upload the `dist` folder.
-- After deployment, you will get a public link like: `https://your-app.netlify.app`
+- Import the repo into Vercel.
+- Keep default build settings unless your Vercel project already has custom settings.
+- Wait for deployment to finish and copy your production URL, for example:
 
-## 3. Update manifest.json
+```
+https://your-app.vercel.app
+```
 
-- Open `appPackage/manifest.json`.
-- Replace variables:
-  - `${{TAB_ENDPOINT}}` → your public link (e.g. `https://your-app.vercel.app`)
-  - `${{TAB_DOMAIN}}` → domain (e.g. `your-app.vercel.app`)
-- Example:
+## 4) Update Teams manifest
+
+Edit `appPackage/manifest.json`:
+
+- `contentUrl`: use root URL (not `/tabs/home`)
+- `websiteUrl`: use root URL (not `/tabs/home`)
+- `validDomains`: include only your Vercel domain
+
+Example:
+
 ```json
-"contentUrl": "https://your-app.vercel.app/tabs/home",
-"websiteUrl": "https://your-app.vercel.app/tabs/home",
+"contentUrl": "https://your-app.vercel.app/",
+"websiteUrl": "https://your-app.vercel.app/",
 "validDomains": ["your-app.vercel.app"]
 ```
 
-## 4. Package the App
+## 5) Package and upload app to Teams
 
-- Zip manifest.json and icons into a .zip file.
-- Make sure the .zip only contains manifest.json and icons.
+- Zip only these files from `appPackage/`:
+  - `manifest.json`
+  - `color.png`
+  - `outline.png`
+- In Teams: Apps → Manage your apps (or Upload a custom app) → upload the zip.
 
-## 5. Import to Teams
+## 6) Verify in Teams Web first
 
-- Go to Teams → Apps → Upload a custom app → Select the .zip file you just created.
+- Open the tab in Teams Web (Edge/Chrome).
+- If blank screen appears, press F12 and check Console/Network.
 
----
+## Troubleshooting checklist (blank screen)
 
-If you see a blank screen, check that the links in manifest.json match your public link.
-
-Good luck!
+- Tab URL in manifest uses `/` (not `/tabs/home`).
+- `validDomains` exactly matches Vercel host.
+- Vercel deploy is the latest commit.
+- JS/CSS assets return `200` in Network tab.
+- No Teams SDK init error shown in the page.
