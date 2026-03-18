@@ -20,23 +20,23 @@ const EMPLOYEE_PROFILES: EmployeeProfile[] = [
     email: "Thai-Hien-Phan@rgz5.onmicrosoft.com",
   },
   {
-    id: "minh-tri",
-    name: "Minh Tri",
+    id: "hoang-long",
+    name: "Hoang Long",
     title: "Frontend Engineer",
     department: "Digital Product",
     expertise: ["Interface design", "Performance optimization", "Dashboard development"],
     skills: ["React", "Vite", "CSS", "Figma"],
-    email: "minh.tri@contoso.com",
+    email: "long-hoang@rgz5.onmicrosoft.com",
   },
   {
-    id: "thu-ha",
-    name: "Thu Ha",
+    id: "hoang-huy",
+    name: "Hoang Huy",
     title: "Project Manager",
     department: "Operations",
     expertise: ["Planning", "Schedule management", "Cross-team collaboration"],
     skills: ["Agile", "Scrum", "Jira", "Stakeholder Management"],
-    email: "thu.ha@contoso.com",
-  },
+    email: "HoangHuy@rgz5.onmicrosoft.com",
+  }
 ];
 
 const EMPTY_FORM: ProfileFormData = {
@@ -116,7 +116,7 @@ export default function App() {
       } catch (error) {
         console.error("Teams initialization failed", error);
         if (isMounted) {
-          setTeamsInitError("Không thể khởi tạo Teams SDK. Hãy mở app trong Microsoft Teams và kiểm tra lại manifest/domain.");
+          setTeamsInitError("Unable to initialize the Teams SDK. Please open the app in Microsoft Teams and check the manifest/domain again.");
         }
       }
     };
