@@ -1,4 +1,4 @@
-﻿import type { EmployeeProfile } from "../types";
+import type { EmployeeProfile } from "../types";
 
 type ProfileModalProps = {
   profile: EmployeeProfile;
@@ -22,29 +22,34 @@ export function ProfileModal({ profile, onClose, onEdit, onDelete, onChat }: Pro
         <section className="mt-4">
           <h4 className="text-sm font-semibold uppercase tracking-wide text-(--color-text-muted)">Basic Information</h4>
           <p className="mt-1 text-sm text-(--color-text-secondary)">
-            {profile.title} - {profile.department}
+            {[profile.title, profile.department].filter(Boolean).join(" - ")}
           </p>
         </section>
 
-        <section className="mt-4">
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-(--color-text-muted)">Expertise and Skills</h4>
-          <p className="mt-1 text-sm text-(--color-text-secondary)">Detailed capability profile with role-specific skills and expertise tags.</p>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-(--color-text-primary)">
-            {profile.expertise.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {profile.skills.map((skill) => (
-              <span
-                key={skill}
-                className="rounded-full border border-(--color-border) bg-(--color-pill) px-2.5 py-1 text-xs text-(--color-pill-text)"
-              >
-                {skill}
-              </span>
-            ))}
-          </div>
-        </section>
+        {(profile.expertise.length > 0 || profile.skills.length > 0) && (
+          <section className="mt-4">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-(--color-text-muted)">Expertise and Skills</h4>
+            {profile.expertise.length > 0 && (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-(--color-text-primary)">
+                {profile.expertise.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            )}
+            {profile.skills.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {profile.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="rounded-full border border-(--color-border) bg-(--color-pill) px-2.5 py-1 text-xs text-(--color-pill-text)"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="mt-4">
           <h4 className="text-sm font-semibold uppercase tracking-wide text-(--color-text-muted)">Quick Collaboration</h4>
