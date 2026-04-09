@@ -12,7 +12,7 @@ import type { EmployeeProfile, ProfileFormData } from "./types";
 const EMPLOYEE_PROFILES: EmployeeProfile[] = [
   {
     id: "thai-hien",
-    name: "Thai Hien",
+    name: "Thai Hien samble",
     title: "Software Solution Specialist",
     department: "Information Technology",
     expertise: ["Solution consulting", "Microsoft 365 integration", "Business analysis"],
@@ -21,7 +21,7 @@ const EMPLOYEE_PROFILES: EmployeeProfile[] = [
   },
   {
     id: "hoang-long",
-    name: "Hoang Long",
+    name: "Hoang Long samble",
     title: "Frontend Engineer",
     department: "Digital Product",
     expertise: ["Interface design", "Performance optimization", "Dashboard development"],
@@ -30,7 +30,7 @@ const EMPLOYEE_PROFILES: EmployeeProfile[] = [
   },
   {
     id: "hoang-huy",
-    name: "Hoang Huy",
+    name: "Hoang Huy samble",
     title: "Project Manager",
     department: "Operations",
     expertise: ["Planning", "Schedule management", "Cross-team collaboration"],
@@ -75,6 +75,15 @@ export default function App() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingProfileId, setEditingProfileId] = React.useState<string | null>(null);
   const [formData, setFormData] = React.useState<ProfileFormData>(EMPTY_FORM);
+  const [teamGroupId, setTeamGroupId] = React.useState<string | null>(null);
+  const isMountedRef = React.useRef(true);
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const departmentOptions = React.useMemo(() => ["all", ...new Set(profiles.map((person) => person.department))], [profiles]);
 
@@ -108,6 +117,10 @@ export default function App() {
           setTheme(context.app.theme);
         }
 
+        if (context?.team?.groupId) {
+          setTeamGroupId(context.team.groupId);
+        }
+
         if (typeof teamsJs.app.registerOnThemeChangeHandler === "function") {
           teamsJs.app.registerOnThemeChangeHandler(themeHandler);
         }
@@ -120,73 +133,82 @@ export default function App() {
         }
       }
     };
-
-    const fetchGraphData = async () => {
-      try {
-        const tenantId = process.env.TENANT_ID;
-        const clientId = process.env.CLIENT_ID;
-        const clientSecret = process.env.CLIENT_SECRET;
-
-        if (!tenantId || !clientId || !clientSecret) return;
-
-        const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            client_id: clientId,
-            scope: "https://graph.microsoft.com/.default",
-            client_secret: clientSecret,
-            grant_type: "client_credentials",
-          }),
-        });
-
-        const tokenData = await tokenResponse.json();
-        if (tokenData.access_token) {
-          const usersResponse = await fetch(
-            "https://graph.microsoft.com/v1.0/users?$top=50&$select=id,displayName,mail,userPrincipalName",
-            {
-              headers: {
-                Authorization: `Bearer ${tokenData.access_token}`,
-              },
-            }
-          );
-          const usersData = await usersResponse.json();
-          if (usersData && usersData.value && isMounted) {
-            const realProfiles = usersData.value.map((user: any) => ({
-              id: user.id,
-              name: user.displayName || "Unknown User",
-              title: "",
-              department: "",
-              expertise: [],
-              skills: [],
-              email: user.mail || user.userPrincipalName || "",
-            }));
-
-            setProfiles((prev) => {
-              const combined = [...realProfiles];
-              prev.forEach((p) => {
-                if (!combined.some((rp) => rp.id === p.id)) {
-                  combined.push(p);
-                }
-              });
-              return combined;
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Graph API fetch failed", error);
-      }
-    };
-
     void initialize();
-    void fetchGraphData();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const fetchGraphData = React.useCallback(async (groupId?: string | null) => {
+    try {
+      const TENANT_ID = process.env.TENANT_ID;
+      const CLIENT_ID = process.env.CLIENT_ID;
+      const CLIENT_SECRET = process.env.CLIENT_SECRET;
+
+      if (!TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) return;
+
+      const tokenResponse = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          client_id: CLIENT_ID,
+          scope: "https://graph.microsoft.com/.default",
+          client_secret: CLIENT_SECRET,
+          grant_type: "client_credentials",
+        }),
+      });
+
+      const tokenData = await tokenResponse.json();
+      if (tokenData.access_token) {
+        // If we have a groupId, fetch members of that group. Otherwise, fetch all users.
+        const apiPath = groupId 
+          ? `groups/${groupId}/members` 
+          : "users";
+        
+        const usersResponse = await fetch(
+          `https://graph.microsoft.com/v1.0/${apiPath}?$top=50&$select=id,displayName,mail,userPrincipalName`,
+          {
+            headers: {
+              Authorization: `Bearer ${tokenData.access_token}`,
+            },
+          }
+        );
+        const usersData = await usersResponse.json();
+        if (usersData && usersData.value && isMountedRef.current) {
+          const realProfiles = usersData.value.map((user: any) => ({
+            id: user.id,
+            name: user.displayName || "Unknown User",
+            title: "",
+            department: "",
+            expertise: [],
+            skills: [],
+            email: user.mail || user.userPrincipalName || "",
+          }));
+
+          setProfiles((prev) => {
+            const combined = [...realProfiles];
+            prev.forEach((p) => {
+              if (!combined.some((rp) => rp.id === p.id)) {
+                combined.push(p);
+              }
+            });
+            return combined;
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Graph API fetch failed", error);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isTeamsInitialized) {
+      void fetchGraphData(teamGroupId);
+    }
+  }, [isTeamsInitialized, teamGroupId, fetchGraphData]);
 
   React.useEffect(() => {
     if (typeof document === "undefined") {
