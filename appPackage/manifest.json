@@ -1,10 +1,10 @@
 {
     "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.25/MicrosoftTeams.schema.json",
     "manifestVersion": "1.25",
-    "version": "1.0.0",
+    "version": "1.0.5",
     "id": "e4b3c9a1-5d6e-4f8a-9b2c-1d3e5f7a9b0c",
     "developer": {
-        "name": "My App, Inc.",
+        "name": "Thai Hien, Hoang Long",
         "websiteUrl": "https://www.example.com",
         "privacyUrl": "https://www.example.com/privacy",
         "termsOfUseUrl": "https://www.example.com/termsofuse"
@@ -28,7 +28,7 @@
     "staticTabs": [
         {
             "entityId": "index0",
-            "name": "Home",
+            "name": "pj-communication-app",
             "contentUrl": "https://teams-tab-ui.vercel.app/",
             "websiteUrl": "https://teams-tab-ui.vercel.app/",
             "scopes": [
@@ -38,6 +38,10 @@
             ]
         }
     ],
+	"webApplicationInfo": {
+		"id": "ed591e23-1477-403d-b3cb-4158b1f227b7",
+		"resource": "api://ed591e23-1477-403d-b3cb-4158b1f227b7/"
+	},
     "permissions": [
         "identity",
         "messageTeamMembers"
