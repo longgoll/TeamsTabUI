@@ -40,7 +40,7 @@
         "dev:teamsfx": "env-cmd --silent -f .localConfigs npm run dev",
         "clean": "rimraf ./dist",
         "dev": "npm run build:frontend && nodemon",
-        "build": "tsup && npm run build:frontend",
+        "build": "vite build --outDir dist",
         "build:frontend": "vite build --outDir dist/client"
     }
 }
