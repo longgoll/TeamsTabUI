@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 
 import type { EmployeeProfile } from "../types";
 
@@ -26,10 +26,6 @@ export function EmployeeCard({ profile, onView, onEdit, onDelete, onChat }: Empl
   const handleEdit = React.useCallback(() => onEdit(profile), [onEdit, profile]);
   const handleDelete = React.useCallback(() => onDelete(profile), [onDelete, profile]);
   const handleChat = React.useCallback(() => onChat(profile.email), [onChat, profile.email]);
-  const focusAreas = React.useMemo(
-    () => (profile.expertise.length ? profile.expertise.slice(0, 3).join(" | ") : "Always learning"),
-    [profile.expertise]
-  );
   const visibleSkills = React.useMemo(() => profile.skills.slice(0, 5), [profile.skills]);
   const extraSkills = profile.skills.length - visibleSkills.length;
 
@@ -123,25 +119,30 @@ export function EmployeeCard({ profile, onView, onEdit, onDelete, onChat }: Empl
       </header>
 
       <section className="mt-4 flex flex-1 flex-col gap-4 text-center text-sm text-(--color-text-secondary)">
-        <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-(--color-text-muted)">Focus</p>
-          <p className="text-base text-(--color-text-primary)">{focusAreas}</p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-2">
-          {visibleSkills.map((skill) => (
-            <span
-              key={skill}
-              className="rounded-full border border-(--color-border) bg-(--color-pill) px-3 py-1 text-xs font-medium text-(--color-pill-text)"
-            >
-              {skill}
-            </span>
-          ))}
-          {extraSkills > 0 && (
-            <span className="rounded-full border border-dashed border-(--color-border-strong) bg-transparent px-3 py-1 text-xs font-semibold text-(--color-text-secondary)">
-              +{extraSkills} more
-            </span>
-          )}
-        </div>
+        {profile.expertise.length > 0 && (
+          <div>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-(--color-text-muted)">Focus</p>
+            <p className="text-base text-(--color-text-primary)">{profile.expertise.slice(0, 3).join(" | ")}</p>
+          </div>
+        )}
+
+        {profile.skills.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {visibleSkills.map((skill) => (
+              <span
+                key={skill}
+                className="rounded-full border border-(--color-border) bg-(--color-pill) px-3 py-1 text-xs font-medium text-(--color-pill-text)"
+              >
+                {skill}
+              </span>
+            ))}
+            {extraSkills > 0 && (
+              <span className="rounded-full border border-dashed border-(--color-border-strong) bg-transparent px-3 py-1 text-xs font-semibold text-(--color-text-secondary)">
+                +{extraSkills} more
+              </span>
+            )}
+          </div>
+        )}
       </section>
 
       <footer className="grid grid-cols-2 gap-3 pt-5">

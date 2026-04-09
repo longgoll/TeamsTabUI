@@ -143,9 +143,9 @@ export default function App() {
       if (usersData && usersData.value && isMountedRef.current) {
         const realProfiles = usersData.value.map((user: any) => ({
           id: user.id,
-          name: user.displayName || "Unknown User",
-          title: "",
-          department: "",
+          name: user.displayName,
+          title: user.jobTitle || "",
+          department: user.department || "",
           expertise: [],
           skills: [],
           email: user.mail || user.userPrincipalName || "",
