@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import * as teamsJs from "@microsoft/teams-js";
 
 import "./App.css";
@@ -121,7 +121,67 @@ export default function App() {
       }
     };
 
+    const fetchGraphData = async () => {
+      try {
+        const tenantId = process.env.TENANT_ID;
+        const clientId = process.env.CLIENT_ID;
+        const clientSecret = process.env.CLIENT_SECRET;
+
+        if (!tenantId || !clientId || !clientSecret) return;
+
+        const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            client_id: clientId,
+            scope: "https://graph.microsoft.com/.default",
+            client_secret: clientSecret,
+            grant_type: "client_credentials",
+          }),
+        });
+
+        const tokenData = await tokenResponse.json();
+        if (tokenData.access_token) {
+          const usersResponse = await fetch(
+            "https://graph.microsoft.com/v1.0/users?$top=50&$select=id,displayName,mail,userPrincipalName",
+            {
+              headers: {
+                Authorization: `Bearer ${tokenData.access_token}`,
+              },
+            }
+          );
+          const usersData = await usersResponse.json();
+          if (usersData && usersData.value && isMounted) {
+            const realProfiles = usersData.value.map((user: any) => ({
+              id: user.id,
+              name: user.displayName || "Unknown User",
+              title: "",
+              department: "",
+              expertise: [],
+              skills: [],
+              email: user.mail || user.userPrincipalName || "",
+            }));
+
+            setProfiles((prev) => {
+              const combined = [...realProfiles];
+              prev.forEach((p) => {
+                if (!combined.some((rp) => rp.id === p.id)) {
+                  combined.push(p);
+                }
+              });
+              return combined;
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Graph API fetch failed", error);
+      }
+    };
+
     void initialize();
+    void fetchGraphData();
 
     return () => {
       isMounted = false;
