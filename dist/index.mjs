@@ -1,6 +1,5 @@
 import fs from 'fs';
 import https from 'https';
-import path from 'path';
 import { HttpPlugin, App } from '@microsoft/teams.apps';
 import { ConsoleLogger } from '@microsoft/teams.common/logging';
 import { DevtoolsPlugin } from '@microsoft/teams.dev';
@@ -17,7 +16,7 @@ const app = new App({
   logger: new ConsoleLogger("tab", { level: "debug" }),
   plugins
 });
-app.tab("home", path.join(__dirname, "./client"));
+app.tab("home", __dirname);
 (async () => {
   await app.start(+(process.env.PORT || 3978));
 })();
