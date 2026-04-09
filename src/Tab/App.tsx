@@ -92,9 +92,8 @@ export default function App() {
   const skillOptions = React.useMemo(() => ["all", ...new Set(profiles.flatMap((person) => person.skills))], [profiles]);
 
   React.useEffect(() => {
-    let isMounted = true;
     const themeHandler: teamsJs.app.themeHandler = (nextTheme: string) => {
-      if (isMounted) {
+      if (isMountedRef.current) {
         setTheme(nextTheme);
       }
     };
@@ -105,13 +104,9 @@ export default function App() {
         await teamsJs.app.initialize();
         const context = await teamsJs.app.getContext();
 
-        if (!isMounted) {
+        if (!isMountedRef.current) {
           return;
         }
-
-        // if (context?.app?.host?.name) {
-        //   setContent(`Your app is running in ${context.app.host.name}`);
-        // }
 
         if (context?.app?.theme) {
           setTheme(context.app.theme);
@@ -128,79 +123,46 @@ export default function App() {
         setIsTeamsInitialized(true);
       } catch (error) {
         console.error("Teams initialization failed", error);
-        if (isMounted) {
+        if (isMountedRef.current) {
           setTeamsInitError("Unable to initialize the Teams SDK. Please open the app in Microsoft Teams and check the manifest/domain again.");
         }
       }
     };
     void initialize();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const fetchGraphData = React.useCallback(async (groupId?: string | null) => {
     try {
-      const TENANT_ID = process.env.TENANT_ID;
-      const CLIENT_ID = process.env.CLIENT_ID;
-      const CLIENT_SECRET = process.env.CLIENT_SECRET;
+      const url = groupId 
+        ? `/api/members?groupId=${groupId}` 
+        : `/api/members`;
 
-      if (!TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) return;
+      const response = await fetch(url);
+      const usersData = await response.json();
 
-      const tokenResponse = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          client_id: CLIENT_ID,
-          scope: "https://graph.microsoft.com/.default",
-          client_secret: CLIENT_SECRET,
-          grant_type: "client_credentials",
-        }),
-      });
+      if (usersData && usersData.value && isMountedRef.current) {
+        const realProfiles = usersData.value.map((user: any) => ({
+          id: user.id,
+          name: user.displayName || "Unknown User",
+          title: "",
+          department: "",
+          expertise: [],
+          skills: [],
+          email: user.mail || user.userPrincipalName || "",
+        }));
 
-      const tokenData = await tokenResponse.json();
-      if (tokenData.access_token) {
-        // If we have a groupId, fetch members of that group. Otherwise, fetch all users.
-        const apiPath = groupId 
-          ? `groups/${groupId}/members` 
-          : "users";
-        
-        const usersResponse = await fetch(
-          `https://graph.microsoft.com/v1.0/${apiPath}?$top=50&$select=id,displayName,mail,userPrincipalName`,
-          {
-            headers: {
-              Authorization: `Bearer ${tokenData.access_token}`,
-            },
-          }
-        );
-        const usersData = await usersResponse.json();
-        if (usersData && usersData.value && isMountedRef.current) {
-          const realProfiles = usersData.value.map((user: any) => ({
-            id: user.id,
-            name: user.displayName || "Unknown User",
-            title: "",
-            department: "",
-            expertise: [],
-            skills: [],
-            email: user.mail || user.userPrincipalName || "",
-          }));
-
-          setProfiles((prev) => {
-            const combined = [...realProfiles];
-            prev.forEach((p) => {
-              if (!combined.some((rp) => rp.id === p.id)) {
-                combined.push(p);
-              }
-            });
-            return combined;
+        setProfiles((prev) => {
+          const combined = [...realProfiles];
+          prev.forEach((p) => {
+            if (!combined.some((rp) => rp.id === p.id)) {
+              combined.push(p);
+            }
           });
-        }
+          return combined;
+        });
       }
     } catch (error) {
-      console.error("Graph API fetch failed", error);
+      console.error("Fetch members failed", error);
     }
   }, []);
 
