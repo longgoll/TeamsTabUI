@@ -146,8 +146,8 @@ export default function App() {
           name: user.displayName,
           title: user.jobTitle || "",
           department: user.department || "",
-          expertise: [],
-          skills: [],
+          expertise: user.expertise || [],
+          skills: user.skills || [],
           email: user.mail || user.userPrincipalName || "",
         }));
 
