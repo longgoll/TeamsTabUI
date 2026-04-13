@@ -24,19 +24,18 @@ async function extractInfoFromPDF(downloadUrlOrContentUrl: string, accessToken: 
     const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
     const email = emailMatch ? emailMatch[0].toLowerCase() : null;
 
-    // Trích xuất Skills và Expertise (Hỗ trợ cả định dạng hàng dọc và dấu đầu dòng)
-    const extractSection = (keyword: string) => {
+    // Trích xuất Skills và Expertise (Trả về mảng string[])
+    const extractSection = (keyword: string): string[] => {
       const regex = new RegExp(`${keyword}(?:\\s*[:\\-]|\\s*\\n)\\s*([\\s\\S]*?)(?=\\n\\s*\\n|\\n[A-Z][a-z]+|\\n\\s*--|$)`, 'i');
       const match = text.match(regex);
       if (match && match[1]) {
         return match[1]
           .replace(/[•●▪*-]/g, '')
           .split('\n')
-          .map(s => s.trim())
-          .filter(s => s.length > 1 && !s.includes('--'))
-          .join(', ');
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 1 && !s.includes('--'));
       }
-      return '';
+      return [];
     };
 
     return {
@@ -47,7 +46,7 @@ async function extractInfoFromPDF(downloadUrlOrContentUrl: string, accessToken: 
     };
   } catch (error: any) {
     console.error("Error in extractInfoFromPDF:", error.message);
-    return null;
+    return { email: null, skills: [], expertise: [], title: null };
   }
 }
 
@@ -156,8 +155,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         mail: m.mail || m.userPrincipalName,
         jobTitle: info?.title || m.jobTitle || "Member",
         department: m.department || "",
-        skills: info?.skills || "",
-        expertise: info?.expertise || ""
+        skills: info?.skills || [],
+        expertise: info?.expertise || []
       };
     });
 
