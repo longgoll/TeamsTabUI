@@ -11,15 +11,6 @@ import type { EmployeeProfile, ProfileFormData } from "./types";
 
 const EMPLOYEE_PROFILES: EmployeeProfile[] = [
   {
-    id: "thai-hien",
-    name: "Thai Hien samble",
-    title: "Software Solution Specialist",
-    department: "Information Technology",
-    expertise: ["Solution consulting", "Microsoft 365 integration", "Business analysis"],
-    skills: ["Teams", "React", "TypeScript", "Power Platform"],
-    email: "Thai-Hien-Phan@rgz5.onmicrosoft.com",
-  },
-  {
     id: "hoang-long",
     name: "Hoang Long samble",
     title: "Frontend Engineer",
@@ -27,15 +18,6 @@ const EMPLOYEE_PROFILES: EmployeeProfile[] = [
     expertise: ["Interface design", "Performance optimization", "Dashboard development"],
     skills: ["React", "Vite", "CSS", "Figma"],
     email: "long-hoang@rgz5.onmicrosoft.com",
-  },
-  {
-    id: "hoang-huy",
-    name: "Hoang Huy samble",
-    title: "Project Manager",
-    department: "Operations",
-    expertise: ["Planning", "Schedule management", "Cross-team collaboration"],
-    skills: ["Agile", "Scrum", "Jira", "Stakeholder Management"],
-    email: "HoangHuy@rgz5.onmicrosoft.com",
   }
 ];
 
