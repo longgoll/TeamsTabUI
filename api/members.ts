@@ -6,35 +6,37 @@ async function extractInfoFromPDF(downloadUrlOrContentUrl: string, accessToken: 
     const response = await fetch(downloadUrlOrContentUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    
     if (!response.ok) {
-      console.error(`Fetch failed with status ${response.status} for ${downloadUrlOrContentUrl}`);
+      const errorText = await response.text();
+      console.error(`Fetch failed for file: ${response.status} - ${errorText}`);
       return null;
     }
     
     const buffer = await response.arrayBuffer();
     
     // Sử dụng API của pdf-parse v2
+    // Lưu ý: Nếu vẫn lỗi 500 trên Vercel, có thể do thư viện này cần cấu hình worker đặc biệt.
     const parser = new PDFParse({ data: Buffer.from(buffer) });
     const result = await parser.getText();
     await parser.destroy();
     
     const text = result.text;
 
-    // Trích xuất Email bằng regex
+    // Trích xuất Email
     const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
     const email = emailMatch ? emailMatch[0].toLowerCase() : null;
 
     // Trích xuất Skills và Expertise (Hỗ trợ cả định dạng hàng dọc và dấu đầu dòng)
     const extractSection = (keyword: string) => {
-      // Tìm từ khóa, sau đó lấy nội dung bên dưới cho đến khi gặp phần mới hoặc dấu tách trang
       const regex = new RegExp(`${keyword}(?:\\s*[:\\-]|\\s*\\n)\\s*([\\s\\S]*?)(?=\\n\\s*\\n|\\n[A-Z][a-z]+|\\n\\s*--|$)`, 'i');
       const match = text.match(regex);
       if (match && match[1]) {
         return match[1]
-          .replace(/[•●▪*-]/g, '') // Xóa các ký tự bullet phổ biến
+          .replace(/[•●▪*-]/g, '')
           .split('\n')
           .map(s => s.trim())
-          .filter(s => s.length > 1 && !s.includes('--')) // Lọc bỏ dòng trống hoặc dòng đánh số trang
+          .filter(s => s.length > 1 && !s.includes('--'))
           .join(', ');
       }
       return '';
@@ -46,8 +48,8 @@ async function extractInfoFromPDF(downloadUrlOrContentUrl: string, accessToken: 
       expertise: extractSection('Expertise'),
       title: (text.match(/Title[:\s]+([^\n]+)/i) || [])[1]?.trim() || null
     };
-  } catch (error) {
-    console.error("Error parsing PDF/Office file:", error);
+  } catch (error: any) {
+    console.error("Error in extractInfoFromPDF:", error.message);
     return null;
   }
 }
@@ -60,16 +62,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
   if (!TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) {
-    return res.status(500).json({ error: "Missing environment variables on server" });
+    return res.status(500).json({ 
+      error: "Missing environment variables", 
+      env: { 
+        tenant: !!TENANT_ID, 
+        client: !!CLIENT_ID, 
+        secret: !!CLIENT_SECRET 
+      } 
+    });
   }
 
   try {
     // 1. Get Token
     const tokenResponse = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: CLIENT_ID,
         scope: "https://graph.microsoft.com/.default",
@@ -78,99 +85,93 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
-    const tokenData: any = await tokenResponse.json();
-    if (!tokenData.access_token) {
-      return res.status(401).json({ error: "Failed to obtain access token" });
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      return res.status(500).json({ error: "Auth failed", details: errorText });
     }
+
+    const tokenData: any = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // 2. Fetch Members from Graph
-    const membersPath = groupId ? `groups/${groupId}/members` : "users";
-    const membersResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/${membersPath}?$top=50&$select=id,displayName,mail,userPrincipalName,jobTitle,department`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const membersData: any = await membersResponse.json();
+    // 2. Fetch Members & Drive
+    const [membersRes, driveRes] = await Promise.all([
+      fetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/members?$top=50&$select=id,displayName,mail,userPrincipalName,jobTitle,department`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }),
+      fetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/drive`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+    ]);
+
+    if (!membersRes.ok) throw new Error(`Members fetch failed: ${membersRes.status}`);
+    if (!driveRes.ok) throw new Error(`Drive fetch failed: ${driveRes.status}`);
+
+    const membersData: any = await membersRes.json();
+    const driveData: any = await driveRes.json();
     const members = membersData.value || [];
+    const driveId = driveData.id;
 
-    // 3. Fetch Files from General/Member Profiles
+    // 3. Process Profiles
     let pdfDataMap: Record<string, any> = {};
-    if (groupId) {
-      try {
-        const folderPath = "General/Member Profiles";
-        const driveUrl = `https://graph.microsoft.com/v1.0/groups/${groupId}/drive/root:/${encodeURIComponent(folderPath)}:/children`;
-        const driveResponse = await fetch(driveUrl, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+    const folderPath = "General/Member Profiles";
+    const filesRes = await fetch(`https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodeURIComponent(folderPath)}:/children`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-        if (driveResponse.ok) {
-          const driveData: any = await driveResponse.json();
-          // Hỗ trợ cả PDF và các file Office có thể convert sang PDF
-          const supportedFiles = (driveData.value || []).filter((f: any) => {
-            const name = f.name.toLowerCase();
-            return name.endsWith('.pdf') || name.endsWith('.pptx') || name.endsWith('.docx') || name.endsWith('.doc');
-          });
+    if (filesRes.ok) {
+      const filesData: any = await filesRes.json();
+      const supportedFiles = (filesData.value || []).filter((f: any) => {
+        const name = f.name.toLowerCase();
+        return name.endsWith('.pdf') || name.endsWith('.pptx') || name.endsWith('.docx') || name.endsWith('.doc');
+      });
 
-          // Lấy driveId từ kết quả drive response nếu cần (thường đã có trong metadata file)
-          // Ở đây ta dùng cấu trúc URL /drives/{driveId}/items/{itemId}/content?format=pdf
-          const driveIdRes = await fetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/drive`, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
-          const driveInfo: any = await driveIdRes.json();
-          const driveId = driveInfo.id;
+      console.log(`Processing ${supportedFiles.length} files...`);
 
-          const results = await Promise.all(
-            supportedFiles.map(async (file: any) => {
-              let urlToFetch = file['@microsoft.graph.downloadUrl'];
-              
-              // Nếu không phải PDF, ta gọi endpoint convert sang PDF của Graph
-              if (!file.name.toLowerCase().endsWith('.pdf')) {
-                urlToFetch = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${file.id}/content?format=pdf`;
-              }
+      const profileResults = await Promise.all(
+        supportedFiles.map(async (file: any) => {
+          let url = file['@microsoft.graph.downloadUrl'];
+          if (!file.name.toLowerCase().endsWith('.pdf')) {
+            url = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${file.id}/content?format=pdf`;
+          }
+          if (url) {
+            const info = await extractInfoFromPDF(url, accessToken);
+            if (info) return { filename: file.name, ...info };
+          }
+          return null;
+        })
+      );
 
-              if (urlToFetch) {
-                const info = await extractInfoFromPDF(urlToFetch, accessToken);
-                return { filename: file.name, ...info };
-              }
-              return null;
-            })
-          );
-
-          // Build a map
-          results.filter(Boolean).forEach((item: any) => {
-            if (item.email) {
-              pdfDataMap[item.email] = item;
-            }
-            const emailInFilename = item.filename.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-            if (emailInFilename) {
-              pdfDataMap[emailInFilename[0].toLowerCase()] = item;
-            }
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch profiles:", err);
-      }
+      profileResults.forEach((item: any) => {
+        if (!item) return;
+        if (item.email) pdfDataMap[item.email] = item;
+        const emailMatch = item.filename.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        if (emailMatch) pdfDataMap[emailMatch[0].toLowerCase()] = item;
+      });
     }
 
-    // 4. Merge Data
-    const finalResults = members.map((member: any) => {
-      const email = (member.mail || member.userPrincipalName || "").toLowerCase();
-      const pdfInfo = pdfDataMap[email];
-
+    // 4. Merge
+    const finalResults = members.map((m: any) => {
+      const email = (m.mail || m.userPrincipalName || "").toLowerCase();
+      const info = pdfDataMap[email];
       return {
-        id: member.id,
-        displayName: member.displayName,
-        mail: member.mail,
-        userPrincipalName: member.userPrincipalName,
-        jobTitle: pdfInfo?.title || member.jobTitle || "",
-        department: member.department || "",
-        skills: (pdfInfo?.skills && pdfInfo.skills.length > 0) ? pdfInfo.skills.join(', ') : "",
-        expertise: (pdfInfo?.expertise && pdfInfo.expertise.length > 0) ? pdfInfo.expertise.join(', ') : ""
+        id: m.id,
+        displayName: m.displayName,
+        mail: m.mail || m.userPrincipalName,
+        jobTitle: info?.title || m.jobTitle || "Member",
+        department: m.department || "",
+        skills: info?.skills || "",
+        expertise: info?.expertise || ""
       };
     });
 
     return res.status(200).json({ value: finalResults });
+
   } catch (error: any) {
-    return res.status(500).json({ error: "Internal Server Error", details: error.message });
+    console.error("API Error:", error);
+    return res.status(500).json({ 
+      error: "Internal Server Error", 
+      message: error.message,
+      stack: error.stack 
+    });
   }
 }
