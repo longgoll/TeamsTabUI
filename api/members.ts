@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PDFParse } from 'pdf-parse';
+// @ts-ignore
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 
 async function extractInfoFromPDF(downloadUrlOrContentUrl: string, accessToken: string) {
   try {
@@ -15,12 +16,8 @@ async function extractInfoFromPDF(downloadUrlOrContentUrl: string, accessToken: 
     
     const buffer = await response.arrayBuffer();
     
-    // Sử dụng API của pdf-parse v2
-    // Lưu ý: Nếu vẫn lỗi 500 trên Vercel, có thể do thư viện này cần cấu hình worker đặc biệt.
-    const parser = new PDFParse({ data: Buffer.from(buffer) });
-    const result = await parser.getText();
-    await parser.destroy();
-    
+    // Sử dụng API của pdf-parse v1.1.1 (Thuần JS - Ổn định trên Vercel)
+    const result = await pdf(Buffer.from(buffer));
     const text = result.text;
 
     // Trích xuất Email
