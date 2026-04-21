@@ -64,7 +64,7 @@ export function EmployeeCard({ profile, onView, onChat }: EmployeeCardProps) {
           <p className="text-xl font-semibold tracking-tight">{profile.name}</p>
           <p className="text-sm text-(--color-text-secondary)">{profile.title}</p>
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-(--color-accent)">
-            {profile.department} {profile.location ? `• ${profile.location}` : ""}
+            {[profile.department, profile.location].filter(Boolean).join(" • ")}
           </p>
         </div>
       </header>

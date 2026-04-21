@@ -9,19 +9,6 @@ import { ProfileModal } from "./components/ProfileModal";
 import type { EmployeeProfile } from "./types";
 
 const EMPLOYEE_PROFILES: EmployeeProfile[] = [
-  {
-    id: "hoang-long",
-    name: "Hoang Long samble",
-    title: "Frontend Engineer",
-    department: "Digital Product",
-    expertise: ["Interface design", "Performance optimization", "Dashboard development"],
-    skills: ["React", "Vite", "CSS", "Figma"],
-    email: "long-hoang@rgz5.onmicrosoft.com",
-    avatarUrl: "",
-    presence: "Available",
-    location: "HQ",
-    rawStatus: "Building awesome interfaces"
-  }
 ];
 
 export default function App() {
@@ -45,17 +32,13 @@ export default function App() {
     };
   }, []);
 
-  const departmentOptions = React.useMemo(() => ["all", ...new Set(profiles.map((person) => person.department))], [profiles]);
-
-  const titleOptions = React.useMemo(() => ["all", ...new Set(profiles.map((person) => person.title))], [profiles]);
-
-  const skillOptions = React.useMemo(() => ["all", ...new Set(profiles.flatMap((person) => person.skills))], [profiles]);
+  const departmentOptions = React.useMemo(() => ["all", ...new Set(profiles.map((p) => p.department).filter(Boolean))], [profiles]);
+  const titleOptions = React.useMemo(() => ["all", ...new Set(profiles.map((p) => p.title).filter(Boolean))], [profiles]);
+  const skillOptions = React.useMemo(() => ["all", ...new Set(profiles.flatMap((p) => p.skills).filter(Boolean))], [profiles]);
 
   React.useEffect(() => {
     const themeHandler: teamsJs.app.themeHandler = (nextTheme: string) => {
-      if (isMountedRef.current) {
-        setTheme(nextTheme);
-      }
+      if (isMountedRef.current) setTheme(nextTheme);
     };
 
     const initialize = async () => {
@@ -64,27 +47,17 @@ export default function App() {
         await teamsJs.app.initialize();
         const context = await teamsJs.app.getContext();
 
-        if (!isMountedRef.current) {
-          return;
-        }
-
-        if (context?.app?.theme) {
-          setTheme(context.app.theme);
-        }
-
-        if (context?.team?.groupId) {
-          setTeamGroupId(context.team.groupId);
-        }
+        if (!isMountedRef.current) return;
+        if (context?.app?.theme) setTheme(context.app.theme);
+        if (context?.team?.groupId) setTeamGroupId(context.team.groupId);
 
         if (typeof teamsJs.app.registerOnThemeChangeHandler === "function") {
           teamsJs.app.registerOnThemeChangeHandler(themeHandler);
         }
-
         setIsTeamsInitialized(true);
       } catch (error) {
-        console.error("Teams initialization failed", error);
         if (isMountedRef.current) {
-          setTeamsInitError("Unable to initialize the Teams SDK. Please open the app in Microsoft Teams and check the manifest/domain again.");
+          setTeamsInitError("Unable to initialize the Teams SDK.");
         }
       }
     };
@@ -93,21 +66,18 @@ export default function App() {
 
   const fetchGraphData = React.useCallback(async (groupId?: string | null) => {
     try {
-      const url = groupId 
-        ? `/api/members?groupId=${groupId}` 
-        : `/api/members`;
-
+      const url = groupId ? `/api/members?groupId=${groupId}` : `/api/members`;
       const response = await fetch(url);
       const usersData = await response.json();
 
       if (usersData && usersData.value && isMountedRef.current) {
         const realProfiles = usersData.value.map((user: any) => ({
-          id: user.id,
-          name: user.displayName,
+          id: user.id || Math.random().toString(),
+          name: user.displayName || "Unknown Member",
           title: user.jobTitle || "",
           department: user.department || "",
-          expertise: user.expertise || [],
-          skills: user.skills || [],
+          expertise: (user.expertise || []).filter(Boolean),
+          skills: (user.skills || []).filter(Boolean),
           email: user.mail || user.userPrincipalName || "",
           avatarUrl: user.avatarUrl || "",
           presence: user.presence || "",
@@ -115,15 +85,8 @@ export default function App() {
           rawStatus: user.rawStatus || "",
         }));
 
-        setProfiles((prev) => {
-          const combined = [...realProfiles];
-          prev.forEach((p) => {
-            if (!combined.some((rp) => rp.id === p.id)) {
-              combined.push(p);
-            }
-          });
-          return combined;
-        });
+        // Fetching full data! Wipe out old states completely and reset with real Graph data.
+        setProfiles(realProfiles);
       }
     } catch (error) {
       console.error("Fetch members failed", error);
