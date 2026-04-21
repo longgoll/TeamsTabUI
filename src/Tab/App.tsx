@@ -5,9 +5,8 @@ import "./App.css";
 import { DirectoryFilters } from "./components/DirectoryFilters";
 import { EmployeeDirectoryGrid } from "./components/EmployeeDirectoryGrid";
 import { PageHeader } from "./components/PageHeader";
-import { ProfileFormModal } from "./components/ProfileFormModal";
 import { ProfileModal } from "./components/ProfileModal";
-import type { EmployeeProfile, ProfileFormData } from "./types";
+import type { EmployeeProfile } from "./types";
 
 const EMPLOYEE_PROFILES: EmployeeProfile[] = [
   {
@@ -18,30 +17,12 @@ const EMPLOYEE_PROFILES: EmployeeProfile[] = [
     expertise: ["Interface design", "Performance optimization", "Dashboard development"],
     skills: ["React", "Vite", "CSS", "Figma"],
     email: "long-hoang@rgz5.onmicrosoft.com",
+    avatarUrl: "",
+    presence: "Available",
+    location: "HQ",
+    rawStatus: "Building awesome interfaces"
   }
 ];
-
-const EMPTY_FORM: ProfileFormData = {
-  name: "",
-  title: "",
-  department: "",
-  skillsText: "",
-  expertiseText: "",
-  email: "",
-};
-
-const parseList = (value: string) =>
-  value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-const createIdFromName = (name: string) =>
-  name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "") || `profile-${Date.now()}`;
 
 export default function App() {
   // const [content, setContent] = React.useState("");
@@ -54,9 +35,6 @@ export default function App() {
   const [titleFilter, setTitleFilter] = React.useState("all");
   const [skillFilter, setSkillFilter] = React.useState("all");
   const [selectedProfile, setSelectedProfile] = React.useState<EmployeeProfile | null>(null);
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [editingProfileId, setEditingProfileId] = React.useState<string | null>(null);
-  const [formData, setFormData] = React.useState<ProfileFormData>(EMPTY_FORM);
   const [teamGroupId, setTeamGroupId] = React.useState<string | null>(null);
   const isMountedRef = React.useRef(true);
 
@@ -131,6 +109,10 @@ export default function App() {
           expertise: user.expertise || [],
           skills: user.skills || [],
           email: user.mail || user.userPrincipalName || "",
+          avatarUrl: user.avatarUrl || "",
+          presence: user.presence || "",
+          location: user.location || "",
+          rawStatus: user.rawStatus || "",
         }));
 
         setProfiles((prev) => {
@@ -186,93 +168,6 @@ export default function App() {
     });
   }, [departmentFilter, keyword, profiles, skillFilter, titleFilter]);
 
-  const openCreateForm = () => {
-    setEditingProfileId(null);
-    setFormData(EMPTY_FORM);
-    setIsFormOpen(true);
-  };
-
-  const openEditForm = (profile: EmployeeProfile) => {
-    setEditingProfileId(profile.id);
-    setFormData({
-      name: profile.name,
-      title: profile.title,
-      department: profile.department,
-      skillsText: profile.skills.join(", "),
-      expertiseText: profile.expertise.join(", "),
-      email: profile.email,
-    });
-    setIsFormOpen(true);
-  };
-
-  const closeForm = () => {
-    setIsFormOpen(false);
-    setEditingProfileId(null);
-    setFormData(EMPTY_FORM);
-  };
-
-  const deleteProfileById = React.useCallback((profileId: string) => {
-    setProfiles((currentProfiles) => currentProfiles.filter((profile) => profile.id !== profileId));
-    setSelectedProfile((current) => (current?.id === profileId ? null : current));
-    setEditingProfileId((current) => (current === profileId ? null : current));
-  }, []);
-
-  const handleDeleteProfile = React.useCallback(
-    (profile: EmployeeProfile) => {
-      const shouldDelete = window.confirm(`Delete profile for ${profile.name}?`);
-      if (!shouldDelete) {
-        return;
-      }
-
-      deleteProfileById(profile.id);
-    },
-    [deleteProfileById]
-  );
-
-  const handleFormFieldChange = (field: keyof ProfileFormData, value: string) => {
-    setFormData((current) => ({ ...current, [field]: value }));
-  };
-
-  const handleSaveProfile = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const nextProfile: EmployeeProfile = {
-      id: editingProfileId ?? createIdFromName(formData.name),
-      name: formData.name.trim(),
-      title: formData.title.trim(),
-      department: formData.department.trim(),
-      skills: parseList(formData.skillsText),
-      expertise: parseList(formData.expertiseText),
-      email: formData.email.trim(),
-    };
-
-    if (
-      !nextProfile.name ||
-      !nextProfile.title ||
-      !nextProfile.department ||
-      !nextProfile.email ||
-      nextProfile.skills.length === 0
-    ) {
-      return;
-    }
-
-    setProfiles((currentProfiles) => {
-      if (editingProfileId) {
-        return currentProfiles.map((profile) => (profile.id === editingProfileId ? nextProfile : profile));
-      }
-
-      const hasDuplicateId = currentProfiles.some((profile) => profile.id === nextProfile.id);
-      if (hasDuplicateId) {
-        nextProfile.id = `${nextProfile.id}-${Date.now()}`;
-      }
-
-      return [nextProfile, ...currentProfiles];
-    });
-
-    setSelectedProfile((current) => (current && current.id === nextProfile.id ? nextProfile : current));
-    closeForm();
-  };
-
   const openChat = async (email: string) => {
     const chatDeepLink = `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}`;
 
@@ -307,7 +202,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-(--color-page) px-4 py-8 text-(--color-text-primary) transition-colors duration-200">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <PageHeader onCreate={openCreateForm} />
+        <PageHeader />
 
         {/* <HostBanner content={content} /> */}
 
@@ -329,8 +224,6 @@ export default function App() {
           className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 auto-rows-[minmax(24rem,1fr)]"
           profiles={filteredProfiles}
           onView={(profile) => setSelectedProfile(profile)}
-          onEdit={openEditForm}
-          onDelete={handleDeleteProfile}
           onChat={openChat}
         />
       </div>
@@ -339,23 +232,9 @@ export default function App() {
         <ProfileModal
           profile={selectedProfile}
           onClose={() => setSelectedProfile(null)}
-          onEdit={(profile) => {
-            openEditForm(profile);
-            setSelectedProfile(null);
-          }}
-          onDelete={handleDeleteProfile}
           onChat={openChat}
         />
       )}
-
-      <ProfileFormModal
-        isOpen={isFormOpen}
-        formData={formData}
-        editingProfileId={editingProfileId}
-        onClose={closeForm}
-        onSubmit={handleSaveProfile}
-        onFieldChange={handleFormFieldChange}
-      />
     </div>
   );
 }

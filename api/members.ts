@@ -1,53 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-// @ts-ignore
-import pdf from 'pdf-parse/lib/pdf-parse.js';
 
-async function extractInfoFromPDF(downloadUrlOrContentUrl: string, accessToken: string) {
+async function fetchToBase64(url: string, token: string): Promise<string | null> {
   try {
-    const response = await fetch(downloadUrlOrContentUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Fetch failed for file: ${response.status} - ${errorText}`);
-      return null;
-    }
-    
-    const buffer = await response.arrayBuffer();
-    
-    // Sử dụng API của pdf-parse v1.1.1 (Thuần JS - Ổn định trên Vercel)
-    const result = await pdf(Buffer.from(buffer));
-    const text = result.text;
-
-    // Trích xuất Email
-    const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    const email = emailMatch ? emailMatch[0].toLowerCase() : null;
-
-    // Trích xuất Skills và Expertise (Trả về mảng string[])
-    const extractSection = (keyword: string): string[] => {
-      const regex = new RegExp(`${keyword}(?:\\s*[:\\-]|\\s*\\n)\\s*([\\s\\S]*?)(?=\\n\\s*\\n|\\n[A-Z][a-z]+|\\n\\s*--|$)`, 'i');
-      const match = text.match(regex);
-      if (match && match[1]) {
-        return match[1]
-          .replace(/[•●▪*-]/g, '')
-          .split('\n')
-          .map((s: string) => s.trim())
-          .filter((s: string) => s.length > 1 && !s.includes('--'));
-      }
-      return [];
-    };
-
-    return {
-      email,
-      skills: extractSection('Skills'),
-      expertise: extractSection('Expertise'),
-      title: (text.match(/Title[:\s]+([^\n]+)/i) || [])[1]?.trim() || null
-    };
-  } catch (error: any) {
-    console.error("Error in extractInfoFromPDF:", error.message);
-    return { email: null, skills: [], expertise: [], title: null };
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
   }
+}
+
+function extractFromStatus(html: string | undefined | null, keyword: string): string[] {
+  if (!html) return [];
+  // E.g. <p>Expertise: Backend, Frontend</p>
+  const textPattern = html.replace(/<[^>]*>?/gm, ''); // strip HTML tags
+  const regex = new RegExp(`${keyword}\\s*:\\s*([^\\n]+)`, 'i');
+  const match = textPattern.match(regex);
+  if (match && match[1]) {
+    return match[1]
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  }
+  return [];
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -58,14 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
   if (!TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) {
-    return res.status(500).json({ 
-      error: "Missing environment variables", 
-      env: { 
-        tenant: !!TENANT_ID, 
-        client: !!CLIENT_ID, 
-        secret: !!CLIENT_SECRET 
-      } 
-    });
+    return res.status(500).json({ error: "Missing environment variables" });
   }
 
   try {
@@ -82,81 +53,84 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      return res.status(500).json({ error: "Auth failed", details: errorText });
+      return res.status(500).json({ error: "Auth failed" });
     }
 
     const tokenData: any = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // 2. Fetch Members & Drive
-    const [membersRes, driveRes] = await Promise.all([
-      fetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/members?$top=50&$select=id,displayName,mail,userPrincipalName,jobTitle,department`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }),
-      fetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/drive`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
-    ]);
-
-    if (!membersRes.ok) throw new Error(`Members fetch failed: ${membersRes.status}`);
-    if (!driveRes.ok) throw new Error(`Drive fetch failed: ${driveRes.status}`);
-
-    const membersData: any = await membersRes.json();
-    const driveData: any = await driveRes.json();
-    const members = membersData.value || [];
-    const driveId = driveData.id;
-
-    // 3. Process Profiles
-    let pdfDataMap: Record<string, any> = {};
-    const folderPath = "General/Member Profiles";
-    const filesRes = await fetch(`https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodeURIComponent(folderPath)}:/children`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    // 2. Fetch Members (Include officeLocation, jobTitle, department)
+    // We increase $top if needed, here top 50 is fine.
+    const membersRes = await fetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/members?$top=50&$select=id,displayName,mail,userPrincipalName,jobTitle,department,officeLocation`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
     });
 
-    if (filesRes.ok) {
-      const filesData: any = await filesRes.json();
-      const supportedFiles = (filesData.value || []).filter((f: any) => {
-        const name = f.name.toLowerCase();
-        return name.endsWith('.pdf') || name.endsWith('.pptx') || name.endsWith('.docx') || name.endsWith('.doc');
-      });
-
-      console.log(`Processing ${supportedFiles.length} files...`);
-
-      const profileResults = await Promise.all(
-        supportedFiles.map(async (file: any) => {
-          let url = file['@microsoft.graph.downloadUrl'];
-          if (!file.name.toLowerCase().endsWith('.pdf')) {
-            url = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${file.id}/content?format=pdf`;
-          }
-          if (url) {
-            const info = await extractInfoFromPDF(url, accessToken);
-            if (info) return { filename: file.name, ...info };
-          }
-          return null;
-        })
-      );
-
-      profileResults.forEach((item: any) => {
-        if (!item) return;
-        if (item.email) pdfDataMap[item.email] = item;
-        const emailMatch = item.filename.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-        if (emailMatch) pdfDataMap[emailMatch[0].toLowerCase()] = item;
-      });
+    if (!membersRes.ok) throw new Error(`Members fetch failed`);
+    const membersData: any = await membersRes.json();
+    const members = membersData.value || [];
+    
+    if (members.length === 0) {
+      return res.status(200).json({ value: [] });
     }
 
-    // 4. Merge
+    const memberIds = members.map((m: any) => m.id);
+
+    // 3. Batch Fetch Presence for all members
+    const presenceRes = await fetch(`https://graph.microsoft.com/v1.0/communications/getPresencesByUserId`, {
+      method: "POST",
+      headers: { 
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ ids: memberIds })
+    });
+    
+    let presences: any[] = [];
+    if (presenceRes.ok) {
+        const presenceData: any = await presenceRes.json();
+        presences = presenceData.value || [];
+    }
+
+    const presenceMap = presences.reduce((acc: any, p: any) => {
+        acc[p.id] = p;
+        return acc;
+    }, {});
+
+    // 4. Concurrently fetch Avatars (with allSettled to not break on errors like 404 No Photo)
+    const avatarPromises = members.map(async (m: any) => {
+      const avatarUrl = await fetchToBase64(`https://graph.microsoft.com/v1.0/users/${m.id}/photo/$value`, accessToken);
+      return { id: m.id, avatarUrl };
+    });
+    
+    const avatarResults = await Promise.allSettled(avatarPromises);
+    const avatarMap = avatarResults.reduce((acc: any, result: any) => {
+      if (result.status === 'fulfilled' && result.value) {
+        acc[result.value.id] = result.value.avatarUrl;
+      }
+      return acc;
+    }, {});
+
+
+    // 5. Merge all Data
     const finalResults = members.map((m: any) => {
-      const email = (m.mail || m.userPrincipalName || "").toLowerCase();
-      const info = pdfDataMap[email];
+      const presence = presenceMap[m.id];
+      const rawStatusHtml = presence?.statusMessage?.message?.content || "";
+      
+      const skills = extractFromStatus(rawStatusHtml, "Skills");
+      const expertise = extractFromStatus(rawStatusHtml, "Expertise");
+
       return {
         id: m.id,
         displayName: m.displayName,
         mail: m.mail || m.userPrincipalName,
-        jobTitle: info?.title || m.jobTitle || "Member",
+        jobTitle: m.jobTitle || "",
         department: m.department || "",
-        skills: info?.skills || [],
-        expertise: info?.expertise || []
+        location: m.officeLocation || "",
+        presence: presence?.availability || "Offline", 
+        rawStatus: rawStatusHtml,
+        avatarUrl: avatarMap[m.id] || null,
+        skills,
+        expertise
       };
     });
 
@@ -164,10 +138,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     console.error("API Error:", error);
-    return res.status(500).json({ 
-      error: "Internal Server Error", 
-      message: error.message,
-      stack: error.stack 
-    });
+    return res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 }

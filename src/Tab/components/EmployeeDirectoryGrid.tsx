@@ -1,16 +1,14 @@
-﻿import type { EmployeeProfile } from "../types";
+import type { EmployeeProfile } from "../types";
 import { EmployeeCard } from "./EmployeeCard";
 
 type EmployeeDirectoryGridProps = {
   profiles: EmployeeProfile[];
   onView: (profile: EmployeeProfile) => void;
-  onEdit: (profile: EmployeeProfile) => void;
-  onDelete: (profile: EmployeeProfile) => void;
   onChat: (email: string) => void;
   className?: string;
 };
 
-export function EmployeeDirectoryGrid({ profiles, onView, onEdit, onDelete, onChat, className = "" }: EmployeeDirectoryGridProps) {
+export function EmployeeDirectoryGrid({ profiles, onView, onChat, className = "" }: EmployeeDirectoryGridProps) {
   const containerClasses = ["grid gap-5 items-stretch", className].filter(Boolean).join(" ");
 
   return (
@@ -18,7 +16,7 @@ export function EmployeeDirectoryGrid({ profiles, onView, onEdit, onDelete, onCh
       <div className={containerClasses}>
         {profiles.map((person) => (
           <div key={person.id} className="h-full">
-            <EmployeeCard profile={person} onView={onView} onEdit={onEdit} onDelete={onDelete} onChat={onChat} />
+            <EmployeeCard profile={person} onView={onView} onChat={onChat} />
           </div>
         ))}
       </div>

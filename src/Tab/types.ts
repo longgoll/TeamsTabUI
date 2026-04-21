@@ -6,6 +6,10 @@ export type EmployeeProfile = {
   expertise: string[];
   skills: string[];
   email: string;
+  avatarUrl?: string;
+  presence?: string;
+  location?: string;
+  rawStatus?: string;
 };
 
 export type ProfileFormData = {
