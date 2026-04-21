@@ -46,10 +46,12 @@ export function ProfileModal({ profile, onClose, onChat }: ProfileModalProps) {
           </div>
 
           <div className="flex-1 mt-1">
-            <h3 className="text-2xl font-bold text-(--color-text-primary)">{profile.name}</h3>
-            <p className="mt-1 text-sm font-medium text-(--color-text-secondary)">
-              {[profile.title, profile.department].filter(Boolean).join(" - ")}
-            </p>
+            {profile.name && <h3 className="text-2xl font-bold text-(--color-text-primary)">{profile.name}</h3>}
+            {(profile.title || profile.department) && (
+              <p className="mt-1 text-sm font-medium text-(--color-text-secondary)">
+                {[profile.title, profile.department].filter(Boolean).join(" - ")}
+              </p>
+            )}
             {profile.location && (
               <p className="text-xs mt-1 font-medium uppercase tracking-[0.2em] text-(--color-text-muted)">
                 📍 {profile.location}
