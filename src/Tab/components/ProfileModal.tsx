@@ -57,12 +57,6 @@ export function ProfileModal({ profile, onClose, onChat }: ProfileModalProps) {
                 📍 {profile.location}
               </p>
             )}
-            {profile.rawStatus && (
-              <div 
-                className="mt-3 text-sm text-(--color-text-primary) border-l-2 border-(--color-border) pl-3 italic opacity-90"
-                dangerouslySetInnerHTML={{ __html: profile.rawStatus }} 
-              />
-            )}
           </div>
         </div>
 
@@ -96,27 +90,20 @@ export function ProfileModal({ profile, onClose, onChat }: ProfileModalProps) {
           </section>
         )}
 
-        <section className="mt-4">
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-(--color-text-muted)">Quick Collaboration</h4>
-          <p className="mt-1 text-sm text-(--color-text-secondary)">
-            Search by department, title, or skills, then start a direct chat in one click.
-          </p>
+        <div className="mt-8 flex justify-end gap-3 pt-5 border-t border-(--color-border)">
           <button
-            className="mt-3 rounded-lg bg-(--color-accent) px-3 py-2 text-sm font-medium text-(--color-accent-contrast) transition hover:bg-(--color-accent-strong)"
+            className="rounded-lg border border-(--color-border) bg-(--color-surface-alt) px-4 py-2.5 text-sm font-semibold text-(--color-text-primary) transition hover:border-(--color-accent)"
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="rounded-lg bg-(--color-accent) px-5 py-2.5 text-sm font-semibold text-(--color-accent-contrast) shadow-sm transition hover:bg-(--color-accent-strong)"
             onClick={() => onChat(profile.email)}
             type="button"
           >
             Chat with {profile.name}
-          </button>
-        </section>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            className="rounded-lg border border-(--color-border) bg-(--color-surface-alt) px-3 py-2 text-sm text-(--color-text-primary) hover:border-(--color-accent)"
-            onClick={onClose}
-            type="button"
-          >
-            Close
           </button>
         </div>
       </div>
