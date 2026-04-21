@@ -18,6 +18,7 @@ export default function App() {
   const [teamsInitError, setTeamsInitError] = React.useState<string | null>(null);
   const [profiles, setProfiles] = React.useState<EmployeeProfile[]>(EMPLOYEE_PROFILES);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = React.useState<boolean>(false);
   const [keyword, setKeyword] = React.useState("");
   const [departmentFilter, setDepartmentFilter] = React.useState("all");
   const [titleFilter, setTitleFilter] = React.useState("all");
@@ -65,8 +66,11 @@ export default function App() {
     void initialize();
   }, []);
 
-  const fetchGraphData = React.useCallback(async (groupId?: string | null) => {
+  const fetchGraphData = React.useCallback(async (groupId?: string | null, isSilentRefresh = false) => {
     try {
+      if (isSilentRefresh) setIsRefreshing(true);
+      else setIsLoading(true);
+
       const url = groupId ? `/api/members?groupId=${groupId}` : `/api/members`;
       const response = await fetch(url);
       const usersData = await response.json();
@@ -86,20 +90,28 @@ export default function App() {
           rawStatus: user.rawStatus || "",
         }));
 
-        // Fetching full data! Wipe out old states completely and reset with real Graph data.
         setProfiles(realProfiles);
       }
     } catch (error) {
       console.error("Fetch members failed", error);
     } finally {
-      setIsLoading(false);
+      if (isSilentRefresh) setIsRefreshing(false);
+      else setIsLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
-    if (isTeamsInitialized) {
-      void fetchGraphData(teamGroupId);
-    }
+    if (!isTeamsInitialized) return;
+    
+    // Initial fetch
+    void fetchGraphData(teamGroupId);
+
+    // Auto-sync every 30 seconds to keep presence almost real-time without user action
+    const interval = setInterval(() => {
+      void fetchGraphData(teamGroupId, true);
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [isTeamsInitialized, teamGroupId, fetchGraphData]);
 
   React.useEffect(() => {
