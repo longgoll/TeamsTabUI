@@ -15,12 +15,29 @@ async function fetchToBase64(url: string, token: string): Promise<string | null>
 
 function extractFromStatus(html: string | undefined | null, keyword: string): string[] {
   if (!html) return [];
-  // E.g. <p>Expertise: Backend, Frontend</p>
-  const textPattern = html.replace(/<[^>]*>?/gm, ''); // strip HTML tags
+  
+  // Convert block HTML tags to newlines before stripping remaining HTML to preserve lines
+  let textPattern = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|li)>/gi, '\n')
+    .replace(/<[^>]*>?/gm, ''); 
+
+  // Look for Keyword: and match everything up to the next newline OR the next known keyword indicator like "Skills:"
+  // Instead of complex lookaheads, taking advantage of preserved newlines is cleaner.
   const regex = new RegExp(`${keyword}\\s*:\\s*([^\\n]+)`, 'i');
   const match = textPattern.match(regex);
   if (match && match[1]) {
-    return match[1]
+    // There might be another keyword on the same line if they didn't use newlines. e.g "Expertise: A, B - Skills: C, D"
+    // Let's strip anything after another keyword like "Skills:" or "Expertise:" if it sneaks in.
+    let content = match[1];
+    if (keyword.toLowerCase() === 'expertise') {
+      content = content.split(/skills\s*:/i)[0]; // stop if hit skills
+    } else if (keyword.toLowerCase() === 'skills') {
+      content = content.split(/expertise\s*:/i)[0]; // stop if hit expertise
+    }
+    
+    return content
+      .replace(/[-|;]/g, ',') // Support common separators user might use instead of commas
       .split(',')
       .map(s => s.trim())
       .filter(s => s.length > 0);

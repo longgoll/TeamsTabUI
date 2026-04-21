@@ -17,6 +17,7 @@ export default function App() {
   const [isTeamsInitialized, setIsTeamsInitialized] = React.useState(false);
   const [teamsInitError, setTeamsInitError] = React.useState<string | null>(null);
   const [profiles, setProfiles] = React.useState<EmployeeProfile[]>(EMPLOYEE_PROFILES);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [keyword, setKeyword] = React.useState("");
   const [departmentFilter, setDepartmentFilter] = React.useState("all");
   const [titleFilter, setTitleFilter] = React.useState("all");
@@ -90,6 +91,8 @@ export default function App() {
       }
     } catch (error) {
       console.error("Fetch members failed", error);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -184,6 +187,7 @@ export default function App() {
         />
 
         <EmployeeDirectoryGrid
+          isLoading={isLoading}
           className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 auto-rows-[minmax(24rem,1fr)]"
           profiles={filteredProfiles}
           onView={(profile) => setSelectedProfile(profile)}

@@ -38,6 +38,7 @@ export function EmployeeCard({ profile, onView, onChat }: EmployeeCardProps) {
   return (
     <article
       className="group relative flex h-full w-full min-h-96 flex-col rounded-2xl border border-(--color-border) bg-(--color-surface-card) p-5 text-(--color-text-primary) shadow-[0_16px_30px_var(--color-card-shadow)] transition duration-300 hover:-translate-y-1 hover:border-(--color-accent)"
+      style={{ animation: 'fade-in-up 0.5s ease-out forwards' }}
     >
       <header className="flex flex-col items-center gap-3 text-center">
         <div className="relative">
@@ -69,29 +70,38 @@ export function EmployeeCard({ profile, onView, onChat }: EmployeeCardProps) {
         </div>
       </header>
 
-      <section className="mt-4 flex flex-1 flex-col gap-4 text-center text-sm text-(--color-text-secondary)">
+      <section className="mt-4 border-t border-(--color-border) pt-4 flex flex-1 flex-col gap-4 text-center text-sm text-(--color-text-secondary)">
         {profile.expertise.length > 0 && (
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-(--color-text-muted)">Focus</p>
-            <p className="text-base text-(--color-text-primary)">{profile.expertise.slice(0, 3).join(" | ")}</p>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-(--color-accent) mb-2">🎯 Expertise</p>
+            <div className="flex flex-wrap justify-center gap-1">
+              {profile.expertise.map((exp) => (
+                <span key={exp} className="text-xs font-semibold text-(--color-text-primary)">
+                  {exp} {exp !== profile.expertise[profile.expertise.length - 1] && <span className="text-(--color-border-strong) mx-1">|</span>}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
         {profile.skills.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2">
-            {visibleSkills.map((skill) => (
-              <span
-                key={skill}
-                className="rounded-full border border-(--color-border) bg-(--color-pill) px-3 py-1 text-xs font-medium text-(--color-pill-text)"
-              >
-                {skill}
-              </span>
-            ))}
-            {extraSkills > 0 && (
-              <span className="rounded-full border border-dashed border-(--color-border-strong) bg-transparent px-3 py-1 text-xs font-semibold text-(--color-text-secondary)">
-                +{extraSkills} more
-              </span>
-            )}
+          <div>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-(--color-text-muted) mb-2">💻 Technical Skills</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {visibleSkills.map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-full border border-(--color-border-strong) bg-(--color-surface) px-3 py-1 text-xs font-medium text-(--color-text-primary) shadow-sm"
+                >
+                  {skill}
+                </span>
+              ))}
+              {extraSkills > 0 && (
+                <span className="rounded-full border border-dashed border-(--color-border-strong) bg-transparent px-3 py-1 text-xs font-semibold text-(--color-text-secondary)">
+                  +{extraSkills} more
+                </span>
+              )}
+            </div>
           </div>
         )}
       </section>

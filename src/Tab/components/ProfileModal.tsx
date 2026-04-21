@@ -64,28 +64,33 @@ export function ProfileModal({ profile, onClose, onChat }: ProfileModalProps) {
           </div>
         </div>
 
-        {(profile.expertise.length > 0 || profile.skills.length > 0) && (
-          <section className="mt-4">
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-(--color-text-muted)">Expertise and Skills</h4>
-            {profile.expertise.length > 0 && (
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-(--color-text-primary)">
-                {profile.expertise.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            )}
-            {profile.skills.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {profile.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="rounded-full border border-(--color-border) bg-(--color-pill) px-2.5 py-1 text-xs text-(--color-pill-text)"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            )}
+        {profile.expertise.length > 0 && (
+          <section className="mt-5 border-t border-(--color-border) pt-4">
+            <h4 className="text-sm font-semibold uppercase tracking-widest text-(--color-accent)">🎯 Expertise</h4>
+            <div className="mt-2 flex flex-col gap-1.5 text-sm font-medium text-(--color-text-primary)">
+              {profile.expertise.map((item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-(--color-accent) rounded-full"></span>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {profile.skills.length > 0 && (
+          <section className="mt-5 border-t border-(--color-border) pt-4">
+            <h4 className="text-sm font-semibold uppercase tracking-widest text-(--color-text-muted)">💻 Technical Skills</h4>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {profile.skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-full border border-(--color-border-strong) bg-(--color-surface-alt) px-3 py-1.5 text-xs font-semibold text-(--color-text-primary) shadow-sm"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
           </section>
         )}
 
